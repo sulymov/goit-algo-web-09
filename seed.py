@@ -23,8 +23,9 @@ def parsing_authors(url_page):
             full_name = author.text
             
             # готуємо url для парсингу дати та місця народження, опису автора
-            full_name_url = full_name.replace(".", " ").replace("  ", " ").replace(" ", "-").replace("é", "e")
+            full_name_url = full_name.replace("'", "").replace(".", " ").replace("  ", " ").replace(" ", "-").replace("é", "e").strip("-")
             url_author = base_url + "author/" + full_name_url
+            print(full_name_url)
             
             # парсимо дані авторів
             html_author = requests.get(url_author)
@@ -105,16 +106,24 @@ with open('quotes.json', 'w', encoding='utf-8') as f:
 
 with open("authors.json", "r", encoding="utf-8") as f:
     data_from_authors = json.load(f)
+
+    # Спочатку видаляємо всі документи з колекції Author
+    Author.objects.delete()
+    
     for record in data_from_authors:
-        author = Author(
-            fullname = record['fullname'], 
-            born_date = record['born_date'], 
-            born_location = record['born_location'], 
-            description = record['description'])
-        author.save()
+        Author.objects(fullname=record['fullname']).update_one(
+            set__born_date=record['born_date'],
+            set__born_location=record['born_location'],
+            set__description=record['description'],
+            upsert=True
+        )
 
 with open("quotes.json", "r", encoding="utf-8") as f:
     data_from_quotes = json.load(f)
+
+    # Видаляємо всі документи з колекції Quote
+    Quote.objects.delete()
+
     for record in data_from_quotes:
         author = Author.objects(fullname=record['author']).first()
         if author:
